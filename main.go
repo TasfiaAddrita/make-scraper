@@ -4,39 +4,25 @@
 package main
 
 import (
-	"encoding/json"
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/gocolly/colly"
 )
 
-// type job struct {
-// 	Company        string `json:"company"`
-// 	Title          string `json:"title"`
-// 	Location       string `json:"location"`
-// 	Department     string `json:"department"`
-// 	EmploymentType string `json:"type"`
-// 	Description    string `json:"description"`
-// }
-
 type Job struct {
-	Company string `json:"company"`
-	Details struct {
-		Title       string `json:"title"`
-		Location    string `json:"location"`
-		Department  string `json:"department"`
-		Type        string `json:"type"`
-		Description string `json:"description"`
-	} `json:"job"`
+	URL            string `json:"url"`
+	Company        string `json:"company"`
+	Title          string `json:"title"`
+	Location       string `json:"location"`
+	Department     string `json:"department"`
+	EmploymentType string `json:"type"`
+	Description    string `json:"description"`
 }
 
-// main() contains code adapted from example found in Colly's docs:
-// http://go-colly.org/docs/examples/basic/
-func main() {
-	// Instantiate default collector
-	c := colly.NewCollector()
+func scrapeWebsite(c *colly.Collector, jobLink string) {
+	c.Visit("https://jobs.lever.co/brilliant/359b4cd8-1641-49d0-856e-d457aaa90b01")
 
 	sweJob := Job{Company: "Brilliant"}
 
@@ -44,51 +30,54 @@ func main() {
 	employmentTypeSelector := "div.posting-categories"
 	descriptionSelector := "div.content-wrapper.posting-page > div > div:nth-child(2)"
 
-	// first callback
-	c.OnRequest(func(r *colly.Request) {
-		// fmt.Println("Visiting", r.URL)
+	c.OnRequest(func(r *colly.Request) {})
+
+	c.OnResponse(func(r *colly.Response) {})
+
+	c.OnHTML(descriptionSelector, func(e *colly.HTMLElement) {
+		sweJob.Description = e.Text
 	})
 
-	c.OnError(func(_ *colly.Response, err error) {
-		// fmt.Println("Something went wrong:", err)
-	})
-
-	// second callback
-	c.OnResponse(func(r *colly.Response) {
-		// fmt.Println("Visited", r.Request.URL)
-	})
-
-	// third-one callback
 	c.OnHTML(titleSelector, func(e *colly.HTMLElement) {
-		sweJob.Details.Title = e.Text
+		sweJob.Title = e.Text
 	})
 
-	// third-two callback
 	c.OnHTML(employmentTypeSelector, func(e *colly.HTMLElement) {
 		categories := strings.Split(e.Text, "/")
-		sweJob.Details.Location = categories[0]
-		sweJob.Details.Department = categories[1]
-		sweJob.Details.Type = categories[2]
+		sweJob.Location = categories[0]
+		sweJob.Department = categories[1]
+		sweJob.EmploymentType = categories[2]
 	})
 
-	// third-three callback
-	c.OnHTML(descriptionSelector, func(e *colly.HTMLElement) {
-		sweJob.Details.Description = e.Text
-	})
+	c.OnError(func(_ *colly.Response, err error) {})
 
-	c.OnScraped(func(r *colly.Response) {
-		// fmt.Println("Finished", r.Request.URL)
-	})
+	c.OnScraped(func(r *colly.Response) {})
 
-	c.Visit("https://jobs.lever.co/brilliant/359b4cd8-1641-49d0-856e-d457aaa90b01")
-
-	fmt.Printf("%s is hiring a %s %s for their %s location", sweJob.Company, sweJob.Details.Type, sweJob.Details.Title, sweJob.Details.Location)
+	fmt.Printf("%s is hiring a %s %s for their %s location", sweJob.Company, sweJob.EmploymentType, sweJob.Title, sweJob.Location)
 
 	// jobJSON, _ := json.Marshal(sweJob)
 	// fmt.Println(string(jobJSON))
 
-	file, _ := json.MarshalIndent(sweJob, "", " ")
+	// file, _ := json.MarshalIndent(sweJob, "", " ")
+	// _ = ioutil.WriteFile("output.json", file, 0644)
+}
 
-	_ = ioutil.WriteFile("output.json", file, 0644)
+// main() contains code adapted from example found in Colly's docs:
+// http://go-colly.org/docs/examples/basic/
+func main() {
+
+	// ---------FLAG--------------
+	var jobLinkFromCLI string
+
+	flag.StringVar(&jobLinkFromCLI, "url", "", "Add a job from URL.")
+
+	if jobLinkFromCLI != "" {
+		// getJobLinkFromCLI() > scrapeWebsite > addJobToDB (POST request)
+	}
+
+	// Instantiate default collector
+	c := colly.NewCollector()
+
+	scrapeWebsite(c, jobLinkFromCLI)
 
 }
