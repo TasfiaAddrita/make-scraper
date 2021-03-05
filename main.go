@@ -21,6 +21,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Job ...
 type Job struct {
 	ID             primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	URL            string             `json:"url" bson:"url"`
@@ -32,7 +33,8 @@ type Job struct {
 	Description    string             `json:"description" bson:"description"`
 }
 
-func getJobDetailsFromURL(jobLink string) Job {
+// GetJobDetailsFromURL ...
+func GetJobDetailsFromURL(jobLink string) Job {
 	// Instantiate default collector
 	c := colly.NewCollector()
 
@@ -92,8 +94,8 @@ func main() {
 	flag.Parse()
 
 	if jobLinkFromCLI != "" {
-		newJob := getJobDetailsFromURL(jobLinkFromCLI)
-		addJobToDB(newJob)
+		newJob := GetJobDetailsFromURL(jobLinkFromCLI)
+		AddJobToDB(newJob)
 	}
 
 	fmt.Println("Starting server...")

@@ -1,77 +1,67 @@
-# 🕷 makescraper
+# makescraper - Final project
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/YOUR_GITHUB_USERNAME/makescraper)](https://goreportcard.com/report/github.com/YOUR_GITHUB_USERNAME/makescraper)
-
-_Create your very own web scraper and crawler using Go and [Colly](https://go-colly.org)!_
-
-### 📚 Table of Contents
-
-1. [Project Structure](#project-structure)
-2. [Getting Started](#getting-started)
-3. [Deliverables](#deliverables)
-4. [Resources](#resources)
-
-## Project Structure
-
-```bash
-📂 makescraper
-├── README.md
-└── scrape.go
-```
+This project has 2 features:
+- You can scrape a link to a job description hosted on Lever and gather basic data, such as company name, title of the position, etc. and adds it to a MongoDB database via command line.
+- You can build and host a REST API in your local machine to access the websites you have scraped. 
 
 ## Getting Started
 
-1. Visit [github.com/new](https://github.com/new) and create a new repository named `makescraper`.
-2. Run each command line-by-line in your terminal to set up the project:
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-    ```bash
-    $ git clone git@github.com:Make-School-Labs/makescraper.git
-    $ cd makescraper
-    $ git remote rm origin
-    $ git remote add origin git@github.com:YOUR_GITHUB_USERNAME/makescraper.git
-    $ go mod download
-    ```
+### Prerequisites
 
-3. Open `README.md` in your editor and replace all instances of `YOUR_GITHUB_USERNAME` with your GitHub username to enable the Go Report Card badge.
+Must have Golang installed in your computer.
 
-## Deliverables
+### Installing
 
-_Complete each task in the order they appear. Use [GitHub Task List](https://help.github.com/en/github/managing-your-work-on-github/about-task-lists) syntax to update the task list._
+A step by step series of examples that tell you how to get a development env running
 
-### Requirements
+Clone the repo
 
-#### Scraping
+```
+git clone https://www.github.com/TasfiaAddrita/make-scraper/
+```
 
-- [x] **IMPORTANT**: Complete the Web Scraper Workflow worksheet distributed in class.
-- [x] Create a `struct` to store your data.
-- [x] Refactor the `c.OnHTML` callback on line `16` to use the selector(s) you tested while completing the worksheet.
-- [x] Print the data you scraped to `stdout`.
+Create a .env file and enter following variables with your own MongoDB database.
+```
+MONGO_URI=[YOUR MONGO URI]
+DB_NAME=[NAME OF YOUR DATABASE]
+```
+Note: Your database should have a collection named `jobs`. 
 
-##### Stretch Challenges
+Build and run program w/o scraping feature 
 
-- [x] Add more fields to your `struct`. Extract multiple data points from the website. Print them to `stdout` in a readable format.
+```
+go build && go run main.go api.go
+```
 
-#### Serializing & Saving
+or with scraping feature 
 
-- [x] Serialize the `struct` you created to JSON. Print the JSON to `stdout` to validate it.
-- [x] Write scraped data to a file named `output.json`.
-- [x] **Add, commit, and push to GitHub**.
+```
+go build && go run main.go api.go --url [INSERT LEVER JOB LINK HERE]
+```
 
-## Resources
+The API will be hosted at `http://localhost:5000/api/jobs`. You can only make `POST` and `GET` requests.
 
-### Lesson Plans
+### Demo
+<img src="./demo.gif">
 
-- [**BEW 2.5** - Scraping the Web](https://make-school-courses.github.io/BEW-2.5-Strongly-Typed-Languages/#/Lessons/WebScraping.md): Concepts and examples covered in class related to web scraping and crawling.
+## Running the tests
 
-### Example Code
+```
+go test 
+go test -bench=.
+```
 
-#### Scraping
+### Break down into end to end tests
 
-- [**Colly** - Docs](http://go-colly.org/docs/): Check out the sidebar for 20+ examples!
-- [**Ali Shalabi** - Syntax-Helper](https://github.com/alishalabi/syntax-helper): Command line interface to help generate proper code syntax, pulled from the Golang documentation.
+Explain what these tests test and why
 
-#### Serializing & Saving
+`TestGetJobDetailsFromURL` tests if the app scrapes [this website](https://jobs.lever.co/lever/45b30441-05e6-4eae-b004-f2f9895f6942) properly. 
 
-- [JSON to Struct](https://mholt.github.io/json-to-go/): Paste any JSON data and convert it into a Go structure that will support storing that data.
-- [GoByExample - JSON](https://gobyexample.com/json): Covers Go's built-in support for JSON encoding and decoding to and from built-in and custom data types (structs).
-- [GoByExample - Writing Files](https://gobyexample.com/writing-files): Covers creating new files and writing to them.
+`BenchmarkTestGetJobDetailsFromURL` tests how long it takes to scrape the above website.
+
+## Packages used
+- Mux
+- MongoDB 
+- colly 

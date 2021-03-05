@@ -14,7 +14,7 @@ import (
 
 var client *mongo.Client
 
-func addJobToDB(job Job) (*mongo.InsertOneResult, error) {
+func AddJobToDB(job Job) (*mongo.InsertOneResult, error) {
 	collection := client.Database(os.Getenv("DB_NAME")).Collection("jobs")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	result, err := collection.InsertOne(ctx, job)
@@ -31,7 +31,7 @@ func CreateJobEndpoint(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var job Job
 	json.NewDecoder(request.Body).Decode(&job)
-	result, _ := addJobToDB(job)
+	result, _ := AddJobToDB(job)
 	json.NewEncoder(response).Encode(result)
 }
 
@@ -60,4 +60,5 @@ func GetAllJobsEndpoint(response http.ResponseWriter, request *http.Request) {
 	}
 
 	json.NewEncoder(response).Encode(jobs)
+	fmt.Println("GET ALL endpoint being called")
 }
