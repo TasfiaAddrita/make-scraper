@@ -99,6 +99,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/jobs", CreateJobEndpoint).Methods("POST")
+	router.HandleFunc("/api/jobs", GetAllJobsEndpoint).Methods("GET")
 	http.ListenAndServe(":5000", router)
 
 }
