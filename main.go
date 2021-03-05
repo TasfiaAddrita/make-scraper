@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,62 +32,50 @@ type Job struct {
 	Description    string             `json:"description" bson:"description"`
 }
 
-func getJobDetails(c *colly.Collector, jobLink string) Job {
-	// c.Visit("https://jobs.lever.co/brilliant/359b4cd8-1641-49d0-856e-d457aaa90b01")
-	c.Visit(jobLink)
+func getJobDetailsFromURL(jobLink string) Job {
+	// Instantiate default collector
+	c := colly.NewCollector()
 
-	job := Job{Company: "Brilliant"}
+	job := Job{URL: jobLink}
 
+	companySelector := "body > div.page.show > div > div > a > img"
 	titleSelector := ".posting-headline > h2"
 	employmentTypeSelector := "div.posting-categories"
 	descriptionSelector := "div.content-wrapper.posting-page > div > div:nth-child(2)"
 
-	c.OnRequest(func(r *colly.Request) {})
-
+	c.OnRequest(func(r *colly.Request) { fmt.Println("Visiting...", r.URL) })
+	c.OnError(func(_ *colly.Response, err error) {})
 	c.OnResponse(func(r *colly.Response) {})
-
-	c.OnHTML(descriptionSelector, func(e *colly.HTMLElement) {
-		job.Description = e.Text
+	c.OnHTML(companySelector, func(e *colly.HTMLElement) {
+		company := strings.Split(e.Attr("alt"), "logo")[0]
+		job.Company = company
 	})
-
 	c.OnHTML(titleSelector, func(e *colly.HTMLElement) {
 		job.Title = e.Text
 	})
-
 	c.OnHTML(employmentTypeSelector, func(e *colly.HTMLElement) {
 		categories := strings.Split(e.Text, "/")
 		job.Location = categories[0]
 		job.Department = categories[1]
 		job.EmploymentType = categories[2]
 	})
+	c.OnHTML(descriptionSelector, func(e *colly.HTMLElement) {
+		job.Description = e.Text
+	})
+	c.OnScraped(func(r *colly.Response) { fmt.Println("Finished scraping...") })
 
-	c.OnError(func(_ *colly.Response, err error) {})
-
-	c.OnScraped(func(r *colly.Response) {})
+	c.Visit(jobLink)
 
 	fmt.Printf("%s is hiring a %s %s for their %s location", job.Company, job.EmploymentType, job.Title, job.Location)
+	fmt.Println()
 
 	return job
 }
 
 func main() {
 
-	// ---------FLAG--------------
-	// var jobLinkFromCLI string
-
-	// flag.StringVar(&jobLinkFromCLI, "url", "", "Add a job from URL.")
-
-	// if jobLinkFromCLI != "" {
-	// getJobLinkFromCLI() > getJobDetails > addJobToDB (POST request)
-	// }
-
-	// Instantiate default collector
-	// c := colly.NewCollector()
-
-	// getJobDetails(c, jobLinkFromCLI)
-
 	fmt.Println("Starting application...")
-	godotenv.Load()
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file")
@@ -97,9 +86,22 @@ func main() {
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	fmt.Println("Successfully connected to DB...")
 
+	var jobLinkFromCLI string
+
+	flag.StringVar(&jobLinkFromCLI, "url", "", "Add a job from URL.")
+	flag.Parse()
+
+	if jobLinkFromCLI != "" {
+		newJob := getJobDetailsFromURL(jobLinkFromCLI)
+		addJobToDB(newJob)
+	}
+
+	fmt.Println("Starting server...")
+
 	router := mux.NewRouter()
-	router.HandleFunc("/api/jobs", CreateJobEndpoint).Methods("POST")
 	router.HandleFunc("/api/jobs", GetAllJobsEndpoint).Methods("GET")
+	router.HandleFunc("/api/jobs", CreateJobEndpoint).Methods("POST")
+
 	http.ListenAndServe(":5000", router)
 
 }

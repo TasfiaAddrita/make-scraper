@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -13,18 +14,28 @@ import (
 
 var client *mongo.Client
 
-// CreateJobEndpoint ...
+func addJobToDB(job Job) (*mongo.InsertOneResult, error) {
+	collection := client.Database(os.Getenv("DB_NAME")).Collection("jobs")
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	result, err := collection.InsertOne(ctx, job)
+	if err != nil {
+		fmt.Println("Could not add job to database.")
+	} else {
+		fmt.Println("Added job to database.")
+	}
+	return result, err
+}
+
+// CreateJobEndpoint POST api/jobs
 func CreateJobEndpoint(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var job Job
 	json.NewDecoder(request.Body).Decode(&job)
-	collection := client.Database(os.Getenv("DB_NAME")).Collection("jobs")
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	result, _ := collection.InsertOne(ctx, job)
+	result, _ := addJobToDB(job)
 	json.NewEncoder(response).Encode(result)
 }
 
-// GetAllJobsEndpoint ...
+// GetAllJobsEndpoint GET api/jobs
 func GetAllJobsEndpoint(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var jobs []Job
