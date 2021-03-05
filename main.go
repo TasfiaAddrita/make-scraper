@@ -4,27 +4,38 @@
 package main
 
 import (
-	"flag"
+	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Job struct {
-	URL            string `json:"url"`
-	Company        string `json:"company"`
-	Title          string `json:"title"`
-	Location       string `json:"location"`
-	Department     string `json:"department"`
-	EmploymentType string `json:"type"`
-	Description    string `json:"description"`
+	ID             primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	URL            string             `json:"url" bson:"url"`
+	Company        string             `json:"company" bson:"company"`
+	Title          string             `json:"title" bson:"title"`
+	Location       string             `json:"location" bson:"location"`
+	Department     string             `json:"department" bson:"department"`
+	EmploymentType string             `json:"employmentType" bson:"employmentType"`
+	Description    string             `json:"description" bson:"description"`
 }
 
-func scrapeWebsite(c *colly.Collector, jobLink string) {
-	c.Visit("https://jobs.lever.co/brilliant/359b4cd8-1641-49d0-856e-d457aaa90b01")
+func getJobDetails(c *colly.Collector, jobLink string) Job {
+	// c.Visit("https://jobs.lever.co/brilliant/359b4cd8-1641-49d0-856e-d457aaa90b01")
+	c.Visit(jobLink)
 
-	sweJob := Job{Company: "Brilliant"}
+	job := Job{Company: "Brilliant"}
 
 	titleSelector := ".posting-headline > h2"
 	employmentTypeSelector := "div.posting-categories"
@@ -35,49 +46,59 @@ func scrapeWebsite(c *colly.Collector, jobLink string) {
 	c.OnResponse(func(r *colly.Response) {})
 
 	c.OnHTML(descriptionSelector, func(e *colly.HTMLElement) {
-		sweJob.Description = e.Text
+		job.Description = e.Text
 	})
 
 	c.OnHTML(titleSelector, func(e *colly.HTMLElement) {
-		sweJob.Title = e.Text
+		job.Title = e.Text
 	})
 
 	c.OnHTML(employmentTypeSelector, func(e *colly.HTMLElement) {
 		categories := strings.Split(e.Text, "/")
-		sweJob.Location = categories[0]
-		sweJob.Department = categories[1]
-		sweJob.EmploymentType = categories[2]
+		job.Location = categories[0]
+		job.Department = categories[1]
+		job.EmploymentType = categories[2]
 	})
 
 	c.OnError(func(_ *colly.Response, err error) {})
 
 	c.OnScraped(func(r *colly.Response) {})
 
-	fmt.Printf("%s is hiring a %s %s for their %s location", sweJob.Company, sweJob.EmploymentType, sweJob.Title, sweJob.Location)
+	fmt.Printf("%s is hiring a %s %s for their %s location", job.Company, job.EmploymentType, job.Title, job.Location)
 
-	// jobJSON, _ := json.Marshal(sweJob)
-	// fmt.Println(string(jobJSON))
-
-	// file, _ := json.MarshalIndent(sweJob, "", " ")
-	// _ = ioutil.WriteFile("output.json", file, 0644)
+	return job
 }
 
-// main() contains code adapted from example found in Colly's docs:
-// http://go-colly.org/docs/examples/basic/
 func main() {
 
 	// ---------FLAG--------------
-	var jobLinkFromCLI string
+	// var jobLinkFromCLI string
 
-	flag.StringVar(&jobLinkFromCLI, "url", "", "Add a job from URL.")
+	// flag.StringVar(&jobLinkFromCLI, "url", "", "Add a job from URL.")
 
-	if jobLinkFromCLI != "" {
-		// getJobLinkFromCLI() > scrapeWebsite > addJobToDB (POST request)
-	}
+	// if jobLinkFromCLI != "" {
+	// getJobLinkFromCLI() > getJobDetails > addJobToDB (POST request)
+	// }
 
 	// Instantiate default collector
-	c := colly.NewCollector()
+	// c := colly.NewCollector()
 
-	scrapeWebsite(c, jobLinkFromCLI)
+	// getJobDetails(c, jobLinkFromCLI)
+
+	fmt.Println("Starting application...")
+	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+	mongoURI := os.Getenv("MONGO_URI")
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, _ = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	fmt.Println("Successfully connected to DB...")
+
+	router := mux.NewRouter()
+	router.HandleFunc("/api/jobs", CreateJobEndpoint).Methods("POST")
+	http.ListenAndServe(":5000", router)
 
 }
